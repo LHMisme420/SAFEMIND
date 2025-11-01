@@ -2756,7 +2756,7 @@ Next:
   git init
   git add .
   git commit -m "init: safe mind gov ultra"
-  git remote add origin https://github.com/YOURNAME/safe-mind-gov-ultra.git
+  git remote add origin https://github.com/LHMisme420/SAFEMIND/edit/main/README.md
   git push -u origin main
 
 You now have: app + backend + onchain + advanced + infra + CI/CD
