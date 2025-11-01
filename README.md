@@ -2762,3 +2762,30 @@ Next:
 You now have: app + backend + onchain + advanced + infra + CI/CD
 =========================================================
 `);
+module "zero_trust_vpc" {
+  source  = "terraform-google-modules/network/google"
+  project_id = var.project_id
+  network_name = "safe-mind-g14"
+  subnets = [{
+    subnet_name = "private-secure",
+    subnet_ip   = "10.14.0.0/16",
+    subnet_region = var.region
+  }]
+  routes = [{
+    name        = "deny-all-egress",
+    destination = "0.0.0.0/0",
+    next_hop    = "REJECT"
+  }]
+}
+
+resource "google_container_cluster" "g14" {
+  name     = "safe-mind-g14"
+  location = var.region
+  enable_shielded_nodes = true
+  enable_integrity_monitoring = true
+  confidential_nodes { enabled = true }
+  workload_identity_config { workload_pool = "${var.project_id}.svc.id.goog" }
+  network_policy { enabled = true, provider = "CALICO" }
+  logging_service = "logging.googleapis.com/kubernetes"
+  monitoring_service = "monitoring.googleapis.com/kubernetes"
+}
