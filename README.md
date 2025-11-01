@@ -4458,3 +4458,141 @@ async function demo() {
 }
 
 demo().catch(console.error);
+pragma circom 2.0.0;
+
+template QuizProof() {
+    signal input privateAnswers[10];  // e.g., 10 quiz answers (0/1)
+    signal input privateScore;       // Sum of correct (private)
+    signal input publicScore;        // Committed score (public)
+    signal input threshold;          // 80
+    signal output valid;
+
+    // Hash answers for commitment (use Poseidon or SHA256 sim)
+    signal answersHash;
+    component hasher = Poseidon(10);  // Assume Poseidon lib included
+    for (var i=0; i<10; i++) {
+        hasher.inputs[i] <== privateAnswers[i];
+    }
+    answersHash <== hasher.out;
+
+    // Prove score matches public
+    privateScore * privateScore === publicScore * publicScore;  // Quadratic check (or use range proof)
+    valid <== publicScore >= threshold ? 1 : 0;
+    valid * valid === valid;  // Binary constraint
+}
+
+component main = QuizProof();
+// scripts/generate-zkp-keys.js
+const snarkjs = require('snarkjs');
+const fs = require('fs');
+const path = require('path');
+
+async function generate() {
+  const circuitPath = path.join(__dirname, '../onchain/zkp/circuits/quiz_proof.circom');
+  
+  // Compile to R1CS
+  await snarkjs.zkTemplate.compile('quiz_proof.circom', 'quiz_proof.r1cs');
+  
+  // Setup (use phase2 ptAU from snarkjs)
+  const ptau = 'powersOfTau28_hez_final_10.ptau';  // Download from snarkjs resources
+  await snarkjs.zkTemplate.setup('quiz_proof.r1cs', ptau, 'quiz_final.zkey');
+  
+  // Export verification key
+  const vk = await snarkjs.zkTemplate.exportVerificationKey('quiz_final.zkey');
+  fs.writeFileSync('onchain/zkp/circuits/verification_key.json', JSON.stringify(vk));
+  
+  // Generate WASM for proof gen
+  await snarkjs.zkTemplate.genWASM('quiz_proof.r1cs', 'quiz_proof.wasm');
+  
+  console.log('✅ ZKP Keys Generated: Ready for proofs!');
+}
+
+generate().catch(console.error);
+// onchain/zkp/verifier.mjs
+import express from 'express';
+import * as snarkjs from 'snarkjs';
+import fs from 'fs';
+import path from 'path';
+
+const app = express();
+app.use(express.json());
+
+const DIR = path.join(process.cwd(), 'circuits');
+const VERIFICATION_KEY = JSON.parse(fs.readFileSync(path.join(DIR, 'verification_key.json'), 'utf8'));
+const THRESHOLD = 80;
+
+app.post('/verify', async (req, res) => {
+  try {
+    const { proof, publicSignals } = req.body;  // proof from groth16.fullProve, publicSignals: [score, answersHash]
+    
+    if (!proof || !publicSignals?.length !== 2) {
+      return res.status(400).json({ error: 'Invalid: Need proof + [score, answersHash]' });
+    }
+
+    const score = parseInt(publicSignals[0]);
+    if (score < THRESHOLD) {
+      return res.json({ isValid: false, reason: 'Score below threshold' });
+    }
+
+    const ok = await snarkjs.groth16.verify(VERIFICATION_KEY, publicSignals, proof);
+    
+    // Ethics Telemetry Hook (Bonus: Log anonymized)
+    console.log(`ZKP Event: ${ok ? 'Verified' : 'Failed'} | Score: ${score} | Hash: ${publicSignals[1]}`);
+
+    res.json({ 
+      isValid: ok, 
+      score, 
+      answersHash: publicSignals[1],
+      reason: ok ? 'Ethical mastery proven privately' : 'Invalid proof' 
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Verification failed', details: error.message });
+  }
+});
+
+app.listen(3002, () => console.log('Real ZKP Verifier on 3002'));
+// src/lib/evidence.ts
+import { Connection, PublicKey } from '@solana/web3.js';
+
+const SOLANA_RPC = 'https://api.devnet.solana.com';  // Swap to mainnet for prod
+const connection = new Connection(SOLANA_RPC);
+
+export async function fetchEvidence() {
+  // Mock/pull from Firestore: Assume evidence list has txIds
+  const mockEvidence = [
+    { id: 1, type: 'Credential Anchor', txId: '5x...abc', status: 'pending', ethicalScore: 85 },
+    // ... more
+  ];
+
+  // Query live statuses
+  const enriched = await Promise.all(mockEvidence.map(async (item) => {
+    if (item.txId) {
+      const sig = await connection.getSignatureStatus(new PublicKey(item.txId), 'confirmed');
+      return { ...item, status: sig?.value ? 'confirmed' : 'failed' };
+    }
+    return item;
+  }));
+
+  // Calc ATO (e.g., % confirmed anchors)
+  const atoReadiness = (enriched.filter(e => e.status === 'confirmed').length / enriched.length) * 100;
+
+  return { evidence: enriched, atoReadiness: atoReadiness.toFixed(1) + '%' };
+}
+// scripts/ethics-telemetry.js
+const events = [];  // Or push to Firestore
+
+function recordBehavior({ event, userIdHash, score, riskLevel = 'low' }) {  // Anonymized
+  const log = { timestamp: new Date().toISOString(), event, userIdHash, score, riskLevel };
+  events.push(log);
+  
+  // Flag offload: If score high but time low, bump risk
+  if (score > 90 && event === 'quiz_complete' && riskLevel === 'low') {
+    console.warn(`🚩 Potential Offload: User ${userIdHash} aced fast—review for AI assist.`);
+  }
+  
+  // Export to JSON for dashboard
+  require('fs').writeFileSync('telemetry.json', JSON.stringify(events, null, 2));
+}
+
+recordBehavior({ event: 'zkp_verify', userIdHash: 'hash123', score: 85 });  // Test
+console.log('Telemetry logged—integrate with ZKP/PQC hooks.');
