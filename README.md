@@ -5004,4 +5004,4 @@ The following items are **not** included in this Foundational Deployment:
 
 ---
 
-By placing this template on your GitHub, you signal to the world that you are prepared to operationalize a truly revolutionary, secure system on a professional contract basis.
+
