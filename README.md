@@ -3280,3 +3280,32 @@ const out = {
 
 fs.writeFileSync("POAM.json", JSON.stringify(out, null, 2));
 console.log("✅ POAM.json generated");
+name: OPA Zero-Trust Policy Check
+on:
+  pull_request:
+    branches: [ main, master ]
+  push:
+    branches: [ main, master ]
+
+jobs:
+  opa-check:
+    name: Evaluate OPA policies on Kubernetes manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 1. Install OPA CLI
+      - name: Install OPA
+        run: |
+          curl -L -o opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64
+          chmod +x opa
+          sudo mv opa /usr/local/bin/opa
+
+      # 2. Evaluate all manifests against Rego policies
+      - name: Run OPA policy evaluation
+        run: |
+          echo "🔍 Evaluating Kubernetes manifests against policy/rego/zero-trust.rego"
+          # Adjust to the path of your manifests
+          for f in $(find infra -type f -name "*.yaml"); do
+            echo "Checking $f"
+            opa eval --format=pretty --data policy
