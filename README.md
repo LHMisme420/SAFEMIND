@@ -2789,3 +2789,244 @@ resource "google_container_cluster" "g14" {
   logging_service = "logging.googleapis.com/kubernetes"
   monitoring_service = "monitoring.googleapis.com/kubernetes"
 }
+safe-mind-g14/
+├── README.md
+├── LICENSE
+├── SECURITY.md
+├── .gitignore
+├── .github/
+│   └── workflows/
+│       └── secure-ci.yml
+├── app/
+│   └── App.tsx
+├── api/
+│   └── server.mjs
+├── infra/
+│   ├── terraform/
+│   │   ├── main.tf
+│   │   └── variables.tf
+│   └── security/
+│       └── policies.yaml
+├── compliance/
+│   └── fedramp-map.yml
+└── scripts/
+    └── generate-sbom.sh
+# SAFE-MIND G-14 Secure Template
+
+This repository scaffolds a **zero-trust**, **PQC-ready**, **ZKP-aware**, **auditable** AI Safety learning system for teens.
+
+**Important:** This is the *public* template. Do **not** store real keys, credentials, or classified config here.
+
+## Structure
+- `app/` – mobile client (React Native / Expo-compatible)
+- `api/` – secure backend stub (Express, helmet)
+- `infra/` – Terraform baseline (confidential nodes, network policy)
+- `compliance/` – FedRAMP / NIST 800-53 mapping
+- `.github/` – secure CI for supply-chain & scans
+
+## Run (dev)
+```bash
+cd api
+npm install
+node server.mjs
+git init
+git add .
+git commit -m "init: safe-mind-g14"
+git remote add origin https://github.com/YOURNAME/safe-mind-g14.git
+git push -u origin main
+
+---
+
+### 📜 `LICENSE`
+
+```text
+MIT License
+
+Copyright (c) 2025 …
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction...
+# Security Policy (G-14 Template)
+
+- No secrets in Git.
+- All runtime secrets must be injected via environment or KMS/HSM.
+- All services must use mTLS for east–west traffic.
+- CI must produce an SBOM and sign images (cosign/sigstore).
+- Key rotation: 90 days or on compromise.
+- All admin actions must be logged to an immutable destination.
+node_modules
+.env
+.env.*
+dist
+.expo
+.idea
+.vscode
+.DS_Store
+coverage
+.terraform
+terraform.tfstate
+terraform.tfstate.*
+sbom.json
+name: G14 Secure Build
+on:
+  push:
+    branches: [ main, master ]
+jobs:
+  verify-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 1) Static analysis / deps check
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install API deps
+        run: cd api && npm install
+
+      # 2) Security scan placeholder (Snyk/Trivy)
+      - name: Security scan (placeholder)
+        run: echo "Run Snyk/Trivy here"
+
+      # 3) SBOM
+      - name: Generate SBOM
+        run: |
+          mkdir -p artifacts
+          echo '{ "sbom": "placeholder" }' > artifacts/sbom.json
+
+      # 4) (Optional) Sign image in real pipeline
+      - name: Done
+        run: echo "✅ Secure CI completed"
+import React from "react";
+import { View, Text } from "react-native";
+
+export default function App() {
+  return (
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#0f172a" }}>
+      <Text style={{ color: "#38bdf8", fontSize: 24, fontWeight: "700" }}>
+        SAFE-MIND G-14 CLIENT
+      </Text>
+      <Text style={{ color: "white", marginTop: 10 }}>
+        Zero-Trust · PQC · ZKP · Audited
+      </Text>
+    </View>
+  );
+}
+import express from "express";
+import helmet from "helmet";
+import crypto from "crypto";
+
+const app = express();
+app.use(express.json());
+app.use(helmet());
+
+// DENY ALL by default in real mesh/Istio; only /issue is allowed here
+app.post("/issue", (req, res) => {
+  const { uid } = req.body;
+  if (!uid) return res.status(400).json({ error: "uid required" });
+
+  // In production this would call: ZKP_VERIFIER → PQC_KEY_SERVICE → AUDIT_LOG
+  const hash = crypto
+    .createHash("sha256")
+    .update(uid + Date.now().toString())
+    .digest("hex");
+
+  return res.json({
+    status: "ok",
+    // placeholder PQC-style tag:
+    credential_hash: "PQC_SIG_" + hash,
+    audit: { level: "G14-TEMPLATE", ts: new Date().toISOString() },
+  });
+});
+
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => {
+  console.log("🔐 SAFE-MIND G-14 API running on port", PORT);
+});
+terraform {
+  required_version = ">=1.6.0"
+}
+
+provider "google" {
+  project = var.project_id
+  region  = var.region
+}
+
+# Zero-trust VPC
+resource "google_compute_network" "g14_vpc" {
+  name                    = "safe-mind-g14-vpc"
+  auto_create_subnetworks = false
+}
+
+resource "google_compute_subnetwork" "g14_private" {
+  name          = "safe-mind-g14-private"
+  ip_cidr_range = "10.14.0.0/16"
+  region        = var.region
+  network       = google_compute_network.g14_vpc.self_link
+  private_ip_google_access = true
+}
+
+# Confidential K8s / GKE
+resource "google_container_cluster" "g14" {
+  name     = "safe-mind-g14"
+  location = var.region
+
+  enable_shielded_nodes   = true
+  enable_autopilot        = false
+
+  confidential_nodes {
+    enabled = true
+  }
+
+  network    = google_compute_network.g14_vpc.self_link
+  subnetwork = google_compute_subnetwork.g14_private.self_link
+
+  network_policy {
+    enabled  = true
+    provider = "CALICO"
+  }
+
+  workload_identity_config {
+    workload_pool = "${var.project_id}.svc.id.goog"
+  }
+
+  logging_service     = "logging.googleapis.com/kubernetes"
+  monitoring_service  = "monitoring.googleapis.com/kubernetes"
+}
+apiVersion: security.g14/v1
+kind: ZeroTrustPolicy
+metadata:
+  name: safe-mind-g14
+spec:
+  encryption:
+    at_rest: AES-256-GCM
+    in_transit: TLS1.3
+    pqc_handshake: Kyber-Dilithium
+  identity:
+    sso: "SAML/OIDC"
+    mfa: "FIDO2"
+    workload_id: "SPIFFE/SPIRE"
+  network:
+    default: deny-all
+    allowedEndpoints:
+      - /issue
+  audit:
+    mode: immutable
+    target: bigquery-or-worm
+baseline: HIGH
+controls:
+  AC-2: "Accounts + SSO + MFA"
+  AC-6: "Least privilege via IAM / RBAC"
+  AU-6: "Immutable audit logs (BQ/IPFS/Chain)"
+  SC-13: "Cryptographic protection (TLS1.3 + PQC-ready)"
+  SI-2: "Continuous vuln scanning in CI"
+  CM-2: "Config as code (Terraform)"
+  SA-11: "Static analysis + SBOM in CI"
+#!/usr/bin/env bash
+# Simple placeholder — replace with Syft/Grype in real pipe
+mkdir -p artifacts
+echo '{ "sbom": "safe-mind-g14-template" }' > artifacts/sbom.json
+echo "✅ SBOM generated to artifacts/sbom.json"
