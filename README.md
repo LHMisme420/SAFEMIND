@@ -3030,3 +3030,253 @@ controls:
 mkdir -p artifacts
 echo '{ "sbom": "safe-mind-g14-template" }' > artifacts/sbom.json
 echo "✅ SBOM generated to artifacts/sbom.json"
+# compliance/opencontrol.yaml
+schema_version: "1.0.0"
+name: "SAFE-MIND G-14"
+metadata:
+  owner: "SAFE-MIND Security Team"
+  contact: "security@safemind.example"
+  description: >
+    Zero-trust, PQC-ready, ZKP-aware, audit-anchored educational platform
+    for teen AI safety programs.
+standards:
+  - ./standards/fedramp-high.yaml
+components:
+  - ./components/safe-mind-app.yaml
+  - ./components/safe-mind-infra.yaml
+certifications:
+  - name: "fedramp-high"
+    standard: "./standards/fedramp-high.yaml"
+    components:
+      - "./components/safe-mind-app.yaml"
+      - "./components/safe-mind-infra.yaml"
+    params:
+      environment: "production"
+      region: "us-central1"
+# compliance/standards/fedramp-high.yaml
+name: fedramp-high
+family: "NIST SP 800-53r5 / FedRAMP High"
+controls:
+  - id: AC-2
+    name: Account Management
+    params: []
+  - id: AC-6
+    name: Least Privilege
+  - id: AU-6
+    name: Audit Review, Analysis, and Reporting
+  - id: CM-2
+    name: Baseline Configuration
+  - id: SC-7
+    name: Boundary Protection
+  - id: SC-13
+    name: Cryptographic Protection
+  - id: SI-2
+    name: Flaw Remediation
+  - id: SA-11
+    name: Developer Security Testing and Evaluation
+  - id: IA-2
+    name: Identification and Authentication
+  - id: IR-4
+    name: Incident Handling
+# compliance/components/safe-mind-app.yaml
+name: safe-mind-app
+description: "React Native / Expo mobile client"
+satisfies:
+  - control_key: AC-2
+    implementation_status: partial
+    narrative:
+      - text: >
+          The mobile app uses backend-issued tokens and does not create local
+          accounts. Final account management is performed by the IdP (SAML/OIDC).
+  - control_key: AU-6
+    implementation_status: partial
+    narrative:
+      - text: >
+          The app sends all quiz/lesson completion events to the backend for
+          immutable logging (BigQuery / blockchain anchor).
+  - control_key: SC-13
+    implementation_status: partial
+    narrative:
+      - text: >
+          The app enforces TLS 1.3 and rejects plaintext API endpoints.
+# compliance/components/safe-mind-infra.yaml
+name: safe-mind-infra
+description: "Terraform + GKE confidential nodes + IAM + zero-trust VPC"
+satisfies:
+  - control_key: AC-2
+    implementation_status: complete
+    narrative:
+      - text: >
+          Accounts are created and disabled via central IAM (SAML/OIDC) and bound
+          to Kubernetes RBAC. Terraform defines groups and bindings.
+  - control_key: AC-6
+    implementation_status: complete
+    narrative:
+      - text: >
+          Least privilege is enforced with Terraform IAM bindings and K8s Role/RoleBindings.
+  - control_key: AU-6
+    implementation_status: complete
+    narrative:
+      - text: >
+          GKE and application logs are shipped to central logging (e.g., BigQuery,
+          SIEM). Logs are immutable via WORM/bucket retention policies.
+  - control_key: CM-2
+    implementation_status: complete
+    narrative:
+      - text: >
+          Baseline configuration is in code (infra/terraform). Changes require PR review.
+  - control_key: SC-7
+    implementation_status: complete
+    narrative:
+      - text: >
+          VPC is private, ingress is via identity-aware proxy, network policy is enabled
+          with Calico. Default = deny all.
+  - control_key: SC-13
+    implementation_status: partial
+    narrative:
+      - text: >
+          TLS 1.3 enforced. PQC handshake is planned via service mesh upgrade.
+  - control_key: SI-2
+    implementation_status: partial
+    narrative:
+      - text: >
+          CI runs security scans (Snyk/Trivy). Vulnerabilities above threshold fail build.
+  - control_key: SA-11
+    implementation_status: partial
+    narrative:
+      - text: >
+          Secure CI pipeline runs static analysis, SBOM generation, and image signing.
+# policy/rego/zero-trust.rego
+package safemind.zerotrust
+
+default allow = false
+
+# 1. All workloads must run with a non-root user
+violation[msg] {
+  input.kind == "Pod"
+  c := input.spec.containers[_]
+  not c.securityContext.runAsNonRoot
+  msg := sprintf("container %s must runAsNonRoot", [c.name])
+}
+
+# 2. No host networking
+violation[msg] {
+  input.kind == "Pod"
+  input.spec.hostNetwork == true
+  msg := "hostNetwork is not allowed"
+}
+
+# 3. Only approved namespaces
+approved_namespaces := {"safe-mind", "safe-mind-system"}
+
+violation[msg] {
+  ns := input.metadata.namespace
+  not approved_namespaces[ns]
+  msg := sprintf("namespace %s is not approved for G-14 workloads", [ns])
+}
+
+allow {
+  count(violation) == 0
+}
+#!/usr/bin/env node
+/**
+ * scripts/generate-ssp.js
+ * Generate a simple SSP.md from OpenControl YAMLs
+ */
+import fs from "fs";
+import path from "path";
+import yaml from "yaml";
+
+const ROOT = process.cwd();
+const ocPath = path.join(ROOT, "compliance", "opencontrol.yaml");
+const outPath = path.join(ROOT, "SSP.md");
+
+const ocRaw = fs.readFileSync(ocPath, "utf8");
+const oc = yaml.parse(ocRaw);
+
+let md = `# System Security Plan (SSP)\n\n`;
+md += `**System:** ${oc.name}\n\n`;
+md += `**Description:** ${oc.metadata?.description || ""}\n\n`;
+md += `## Standards\n`;
+
+(oc.standards || []).forEach((std) => {
+  md += `- ${std}\n`;
+});
+
+md += `\n## Components\n`;
+(oc.components || []).forEach((comp) => {
+  md += `- ${comp}\n`;
+});
+
+// Pull in component narratives
+md += `\n---\n## Control Implementation\n`;
+
+(oc.components || []).forEach((compPath) => {
+  const full = path.join(ROOT, "compliance", compPath.replace("./", ""));
+  if (!fs.existsSync(full)) return;
+  const compRaw = fs.readFileSync(full, "utf8");
+  const comp = yaml.parse(compRaw);
+  md += `\n### ${comp.name}\n${comp.description || ""}\n`;
+  (comp.satisfies || []).forEach((sat) => {
+    md += `\n**Control:** ${sat.control_key}\n`;
+    md += `Status: ${sat.implementation_status}\n`;
+    (sat.narrative || []).forEach((n) => {
+      md += `- ${n.text}\n`;
+    });
+  });
+});
+
+fs.writeFileSync(outPath, md, "utf8");
+console.log("✅ SSP generated at SSP.md");
+{
+  "name": "safe-mind-g14",
+  "type": "module",
+  "scripts": {
+    "generate:ssp": "node scripts/generate-ssp.js",
+    "generate:poam": "node scripts/generate-poam.js"
+  },
+  "dependencies": {
+    "yaml": "^2.5.0"
+  }
+}
+#!/usr/bin/env node
+/**
+ * scripts/generate-poam.js
+ * Build a simple POA&M (Plan of Action & Milestones)
+ */
+import fs from "fs";
+import path from "path";
+import yaml from "yaml";
+
+const ROOT = process.cwd();
+const ocPath = path.join(ROOT, "compliance", "opencontrol.yaml");
+const oc = yaml.parse(fs.readFileSync(ocPath, "utf8"));
+
+const poam = [];
+
+for (const compPath of oc.components || []) {
+  const full = path.join(ROOT, "compliance", compPath.replace("./", ""));
+  if (!fs.existsSync(full)) continue;
+  const comp = yaml.parse(fs.readFileSync(full, "utf8"));
+  for (const sat of comp.satisfies || []) {
+    if (sat.implementation_status && sat.implementation_status !== "complete") {
+      poam.push({
+        control: sat.control_key,
+        component: comp.name,
+        status: sat.implementation_status,
+        action: "Complete implementation and provide evidence",
+        owner: "Security/Platform Team",
+        due: "2025-12-31"
+      });
+    }
+  }
+}
+
+const out = {
+  system: oc.name,
+  generated_at: new Date().toISOString(),
+  items: poam
+};
+
+fs.writeFileSync("POAM.json", JSON.stringify(out, null, 2));
+console.log("✅ POAM.json generated");
