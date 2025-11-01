@@ -1558,7 +1558,7 @@ Now:
   git init
   git add .
   git commit -m "init: safe mind ultra"
-  git remote add origin https://github.com/YOURNAME/safe-mind-ultra.git
+  git remote add origin https://github.com/LHMisme420/SAFEMIND/blob/main/README.md
   git push -u origin main
 ====================================================
 `);
