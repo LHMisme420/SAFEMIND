@@ -150,3 +150,101 @@ The primary objective of this project's security policy is to protect student da
 
 ## Vulnerability Reporting
 Please report any security vulnerabilities discovered in the SAFE MIND application or infrastructure by emailing **lhmisme2011@gmail.com**.
+// backend/functions/src/issueCredential.ts
+
+import * as functions from "firebase-functions";
+import * as admin from "firebase-admin";
+import crypto from "crypto";
+import fetch from "node-fetch";
+
+admin.initializeApp();
+
+// --- SOVEREIGN MANDATES ---
+const MIN_PASSING_SCORE = 4; // Assuming 6-question quiz requires 4 correct answers to pass
+const REQUIRED_MODULES = ["Module 1", "Module 2", "Module 3", "Module 4", "Module 5", "Module 6"];
+
+export const issueCredential = functions.https.onCall(async (data, context) => {
+    // 1. INPUT SANITIZATION & AUTHENTICATION
+    if (!context.auth) {
+        throw new functions.https.HttpsError("unauthenticated", "Login required.");
+    }
+    const uid = context.auth.uid;
+    const project_id = process.env.GCLOUD_PROJECT; // Get the ID of the hosting environment
+    
+    functions.logger.info(`Initiating Sovereign Credential Audit for UID: ${uid}`);
+
+    // --- 2. SOVEREIGN MANDATE: SERVER-SIDE PROGRESS VERIFICATION ---
+    const modulesCompleted: string[] = [];
+    const db = admin.firestore();
+
+    for (const moduleName of REQUIRED_MODULES) {
+        // Find the specific assessment for this module in the database
+        const assessmentSnap = await db.collection("progress").doc(uid)
+            .collection("assessments").where("moduleName", "==", moduleName).get();
+        
+        if (assessmentSnap.empty) {
+            functions.logger.warn(`Audit failed: ${moduleName} assessment record not found.`);
+            throw new functions.https.HttpsError("failed-precondition", `Module incomplete: ${moduleName}`);
+        }
+
+        // Assume there is only one final assessment per module for simplicity
+        const assessmentData = assessmentSnap.docs[0].data();
+        const score = assessmentData.score || 0; // The actual score recorded on submission
+
+        // MANDATE CHECK: Verify the recorded score meets the Sovereign minimum
+        if (score < MIN_PASSING_SCORE) {
+            functions.logger.warn(`Audit failed: ${moduleName} score (${score}) below minimum.`);
+            throw new functions.https.HttpsError("failed-precondition", `Module failed: ${moduleName}. Score too low.`);
+        }
+
+        modulesCompleted.push(moduleName);
+    }
+    
+    // 3. FINAL INTEGRITY CHECK (Did we pass all 6?)
+    if (modulesCompleted.length !== REQUIRED_MODULES.length) {
+        throw new functions.https.HttpsError("internal", "Internal audit integrity failure.");
+    }
+
+    functions.logger.info(`Sovereign Audit Complete. All 6 modules passed for UID: ${uid}`);
+
+    // --- 4. GENERATE IMMUTABLE HASH PAYLOAD (NON-REPUDIATION) ---
+    const securePayload = {
+        uid: uid,
+        modules: modulesCompleted,
+        // MANDATE: Non-Repudiation Fields
+        issuer_id: project_id, // Links the hash to this specific, auditable Firebase project
+        verification_ts: admin.firestore.FieldValue.serverTimestamp(),
+        issued_on: Date.now() 
+    };
+    
+    // Hash the secure payload for the immutable credential fingerprint
+    const hash = crypto.createHash("sha256").update(JSON.stringify(securePayload)).digest("hex");
+
+    // 5. STORE CERTIFICATE (The Trusted Record)
+    await db.collection("certificates").doc(uid).set({
+        ...securePayload,
+        hash: hash,
+        status: "PENDING_ONCHAIN",
+    });
+
+    // 6. ANCHOR HASH TO SOLANA (The Immutable Ledger)
+    try {
+        // Ensure SOLANA_ENDPOINT is set in Firebase environment config
+        const solanaEndpoint = process.env.SOLANA_ENDPOINT as string;
+        await fetch(solanaEndpoint, { 
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ root: hash, meta: securePayload })
+        });
+        
+        // Update status to complete after successful anchoring attempt
+        await db.collection("certificates").doc(uid).update({ status: "ANCHORED" });
+        
+    } catch (e) {
+        functions.logger.error("Solana anchor failed.", e);
+        await db.collection("certificates").doc(uid).update({ status: "ANCHOR_FAILED" });
+        return { hash, status: "ANCHOR_FAILED" };
+    }
+
+    return { hash, status: "ANCHORED" };
+});
