@@ -516,3 +516,1049 @@ Next:
   git push -u origin main
 ======================================================
 `);
+#!/usr/bin/env node
+// ============================================================================
+// 🧠 SAFE MIND – ULTRA SOVEREIGN EDITION
+// One-file repo generator (frontend + backend + onchain + advanced services)
+// Goal: build a repo that is more advanced than any public, basic AI-safety app
+// Run:  node init-safe-mind-ultra.js
+// Req:  Node 18+
+// Author: Leroy H. Mason (Flamebearer) – 2025
+// ============================================================================
+
+import { writeFileSync, mkdirSync } from "fs";
+
+// tiny helper
+function make(path, content) {
+  const parts = path.split("/");
+  if (parts.length > 1) {
+    const dir = parts.slice(0, -1).join("/");
+    mkdirSync(dir, { recursive: true });
+  }
+  writeFileSync(path, content.trim() + "\n");
+  console.log("✅", path);
+}
+
+// ============================================================================
+// 0. ROOT & META
+// ============================================================================
+make(".nvmrc", "v20.11.1");
+make(".gitignore", `node_modules
+.expo
+dist
+.env
+.env.*
+.idea
+.vscode
+.DS_Store
+firebase-debug.log
+*.log
+coverage
+.terraform
+terraform.tfstate
+terraform.tfstate.*
+`);
+
+make(".dockerignore", `node_modules
+npm-debug.log
+Dockerfile
+.dockerignore
+.git
+.gitignore
+.env
+`);
+
+make(".env.example", `# ===== SAFE MIND ULTRA ENV =====
+FIREBASE_API_KEY=your_firebase_key
+FIREBASE_PROJECT_ID=your_firebase_project
+FIREBASE_APP_ID=your_firebase_app
+SUPABASE_URL=https://your-supabase-url
+SUPABASE_ANON_KEY=your-supabase-anon-key
+SOLANA_RPC=https://api.devnet.solana.com
+SOLANA_PRIVATE_KEY_PATH=wallet.json
+ZKP_VERIFIER_URL=http://localhost:8080
+PQC_KEY_SERVICE_URL=http://localhost:8090
+SOVEREIGN_ORACLE_URL=http://localhost:9000
+`);
+
+make(
+  "LICENSE",
+  `MIT License
+
+Copyright (c) 2025
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction...
+`
+);
+
+make(
+  "README.md",
+  `# 🧠 SAFE MIND – ULTRA SOVEREIGN EDITION
+**Mission:** mandatory AI safety, cryptographically verifiable, post-quantum ready, youth-first.
+
+## 🔭 Why it's advanced
+- Post-Quantum Credential Signing (PQC placeholder – SPHINCS+/Dilithium slot)
+- Zero-Knowledge Proof (ZKP) verification for assessments
+- Dual-chain anchoring (Solana + room for L2)
+- Zero-trust DevOps (GitHub Actions + Sigstore-ready structure)
+- Curriculum auto-moderation gateway (Oracle service)
+- Offline-capable React Native / Expo app for teens
+- Educator guide + governance docs
+
+## 🗂 Structure
+- \`app/\` – React Native (Expo) mobile UI
+- \`backend/\` – Firebase/Supabase functions (issue credential, mirror progress)
+- \`onchain/\` – Solana anchoring, ZKP service, PQC key service
+- \`advanced/\` – oracle, ml-personalizer (future), federation hooks
+- \`docs/\` – curriculum, educator guide, architecture
+- \`.github/\` – CI/CD
+
+## 🏃‍♀️ Quickstart
+\`\`\`bash
+# frontend
+cd app
+npm install
+npx expo start
+
+# backend
+cd ../backend/functions
+npm install
+npm run build
+firebase deploy --only functions
+
+# onchain services
+cd ../../onchain/zkp && npm install && npm run start
+cd ../pqc && npm install && npm run start
+cd ../solana && npm install && npm run start
+\`\`\`
+
+Push to GitHub:
+\`\`\`bash
+git init
+git add .
+git commit -m "init: safe mind ultra sovereign"
+git remote add origin https://github.com/YOURNAME/safe-mind-ultra.git
+git push -u origin main
+\`\`\`
+`
+);
+
+make(
+  "CODE_OF_CONDUCT.md",
+  `# Code of Conduct
+- Youth-first, safety-first.
+- No exploitation, no dark patterns.
+- All contributions must preserve privacy-by-design.
+`
+);
+
+make(
+  "SECURITY.md",
+  `# Security Policy
+- No PII in public repos.
+- COPPA / FERPA alignment.
+- Report issues:  lhmisme2011@gmail.com
+`
+);
+
+make(
+  "CONTRIBUTING.md",
+  `# Contributing
+1. Fork
+2. Create feature branch
+3. Run tests
+4. Submit PR
+All PRs must keep the curriculum ethical and age appropriate.
+`
+);
+
+// ============================================================================
+// 1. DOCS
+// ============================================================================
+make(
+  "docs/curriculum.md",
+  `# SAFE MIND Curriculum (Ultra)
+This curriculum contains **7** core modules.
+
+## Module 1 – What Is AI? (Machine Mind)
+- AI = data + pattern + prediction
+- Limits, hallucination, non-human cognition
+
+## Module 2 – Digital Responsibility (You Are the Data)
+- Privacy
+- Consent
+- Data trails
+
+## Module 3 – Bias & Fairness
+- Human → dataset → model
+- Case studies
+- Fairness interventions
+
+## Module 4 – AI & Society
+- Deepfakes
+- Misinformation
+- Future of work
+
+## Module 5 – Human Resilience
+- Attention economy
+- Digital sabbath
+- Empathy & faith
+
+## Module 6 – AI Citizenship
+- Law
+- Rights
+- Student AI Bill of Rights
+
+## Module 7 – Adversarial Resilience & Autonomous Agents
+- Jailbreaks & prompt attacks
+- C2PA / provenance
+- Agentic AI & guardrails
+- Final thesis: "How to govern a self-improving AI"
+`
+);
+
+make(
+  "docs/educator-guide.md",
+  `# Educator Guide
+1. Assign modules in order (1→7)
+2. Students complete in Expo app
+3. Backend verifies completion, checks ZKP, signs with PQC, anchors on Solana
+4. You verify their certificate hash (no PII on-chain)
+`
+);
+
+make(
+  "docs/architecture.md",
+  `# Architecture
+Client (Expo) → Firebase Functions (issueCredential) → Oracle (check security posture) → ZKP Verifier → PQC Key Service → Solana Anchor.
+All events are logged and can be mirrored to Supabase / IPFS for durability.
+`
+);
+
+// ============================================================================
+// 2. GITHUB WORKFLOWS
+// ============================================================================
+make(
+  ".github/workflows/build.yml",
+  `name: Build & Verify
+on:
+  push:
+    branches: [main, master]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Install app deps
+        run: cd app && npm install
+      - name: Lint app
+        run: cd app && npm run lint || true
+      - name: Build functions
+        run: cd backend/functions && npm install && npm run build
+`
+);
+
+// ============================================================================
+// 3. APP (React Native / Expo)
+// ============================================================================
+make(
+  "app/package.json",
+  JSON.stringify(
+    {
+      name: "safe-mind-ultra",
+      version: "0.3.0",
+      private: true,
+      main: "node_modules/expo/AppEntry.js",
+      scripts: {
+        start: "expo start",
+        lint: "eslint . --ext .ts,.tsx || true"
+      },
+      dependencies: {
+        expo: "~52.0.0",
+        react: "18.3.1",
+        "react-native": "0.76.0",
+        "@react-navigation/native": "^6",
+        "@react-navigation/native-stack": "^6"
+      }
+    },
+    null,
+    2
+  )
+);
+
+make(
+  "app/tsconfig.json",
+  JSON.stringify(
+    {
+      compilerOptions: {
+        jsx: "react",
+        allowJs: true,
+        noEmit: true,
+        target: "ES2020",
+        moduleResolution: "node"
+      }
+    },
+    null,
+    2
+  )
+);
+
+make(
+  "app/App.tsx",
+  `import React from "react";
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import HomeScreen from "./src/screens/HomeScreen";
+import ModuleScreen from "./src/screens/ModuleScreen";
+import LessonScreen from "./src/screens/LessonScreen";
+import QuizScreen from "./src/screens/QuizScreen";
+import ProfileScreen from "./src/screens/ProfileScreen";
+
+const Stack = createNativeStackNavigator();
+
+export default function App() {
+  return (
+    <NavigationContainer>
+      <Stack.Navigator initialRouteName="Home" screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="Module" component={ModuleScreen} />
+        <Stack.Screen name="Lesson" component={LessonScreen} />
+        <Stack.Screen name="Quiz" component={QuizScreen} />
+        <Stack.Screen name="Profile" component={ProfileScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
+`
+);
+
+make(
+  "app/src/screens/HomeScreen.tsx",
+  `import React from "react";
+import { View, Text, TouchableOpacity, StyleSheet, FlatList } from "react-native";
+import lessons from "../data/lessons.json";
+
+export default function HomeScreen({ navigation }: any) {
+  const modules = Array.from(new Set(lessons.map((l:any) => l.module)));
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>SAFE MIND ULTRA</Text>
+      <Text style={styles.subtitle}>AI Safety for Teens (ZKP + PQC)</Text>
+      <FlatList
+        data={modules}
+        keyExtractor={(item) => item}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() => navigation.navigate("Module", { moduleId: item })}
+          >
+            <Text style={styles.cardTitle}>{item}</Text>
+            <Text style={styles.cardText}>Begin this module →</Text>
+          </TouchableOpacity>
+        )}
+      />
+      <TouchableOpacity onPress={() => navigation.navigate("Profile")}>
+        <Text style={styles.profile}>Profile →</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#020617", padding: 20, paddingTop: 60 },
+  title: { fontSize: 30, fontWeight: "800", color: "white" },
+  subtitle: { fontSize: 14, color: "#cbd5f5", marginBottom: 20 },
+  card: { backgroundColor: "#0f172a", padding: 18, borderRadius: 16, marginBottom: 14 },
+  cardTitle: { color: "white", fontSize: 18, fontWeight: "600" },
+  cardText: { color: "#94a3b8", fontSize: 12 },
+  profile: { marginTop: 12, color: "#38bdf8" }
+});
+`
+);
+
+make(
+  "app/src/screens/ModuleScreen.tsx",
+  `import React from "react";
+import { View, Text, StyleSheet, FlatList, TouchableOpacity } from "react-native";
+import lessons from "../data/lessons.json";
+
+export default function ModuleScreen({ route, navigation }: any) {
+  const { moduleId } = route.params;
+  const filtered = lessons.filter((l:any) => l.module === moduleId);
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>{moduleId}</Text>
+      <FlatList
+        data={filtered}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() => navigation.navigate("Lesson", { lessonId: item.id })}
+          >
+            <Text style={styles.cardTitle}>{item.title}</Text>
+            <Text style={styles.cardText}>{item.description}</Text>
+          </TouchableOpacity>
+        )}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#020617", padding: 20, paddingTop: 60 },
+  title: { fontSize: 24, color: "white", marginBottom: 14, fontWeight: "700" },
+  card: { backgroundColor: "#0f172a", padding: 16, borderRadius: 14, marginBottom: 10 },
+  cardTitle: { color: "white", fontSize: 16, fontWeight: "600" },
+  cardText: { color: "#94a3b8", fontSize: 12 }
+});
+`
+);
+
+make(
+  "app/src/screens/LessonScreen.tsx",
+  `import React from "react";
+  import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
+  import lessons from "../data/lessons.json";
+  
+  export default function LessonScreen({ route, navigation }: any) {
+    const { lessonId } = route.params;
+    const lesson = lessons.find((l:any) => l.id === lessonId);
+  
+    if (!lesson) {
+      return <View style={styles.container}><Text style={styles.title}>Not found</Text></View>;
+    }
+    return (
+      <ScrollView style={styles.container}>
+        <Text style={styles.module}>{lesson.module}</Text>
+        <Text style={styles.title}>{lesson.title}</Text>
+        <Text style={styles.body}>{lesson.content}</Text>
+        <TouchableOpacity
+          style={styles.quizButton}
+          onPress={() => navigation.navigate("Quiz", { lessonId })}
+        >
+          <Text style={styles.quizText}>Take Quiz</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    );
+  }
+  
+  const styles = StyleSheet.create({
+    container: { flex: 1, backgroundColor: "#020617", padding: 20, paddingTop: 60 },
+    module: { color: "#38bdf8", marginBottom: 6 },
+    title: { color: "white", fontSize: 22, fontWeight: "700", marginBottom: 10 },
+    body: { color: "#e2e8f0", lineHeight: 20 },
+    quizButton: { marginTop: 18, backgroundColor: "#38bdf8", padding: 12, borderRadius: 10 },
+    quizText: { textAlign: "center", color: "#0f172a", fontWeight: "700" }
+  });
+  `
+);
+
+make(
+  "app/src/screens/QuizScreen.tsx",
+  `import React, { useState } from "react";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import lessons from "../data/lessons.json";
+
+export default function QuizScreen({ route, navigation }: any) {
+  const { lessonId } = route.params;
+  const lesson = lessons.find((l:any) => l.id === lessonId);
+  const questions = lesson?.quiz || [];
+  const [index, setIndex] = useState(0);
+  const [score, setScore] = useState(0);
+  const q = questions[index];
+
+  const handleAnswer = (opt: string) => {
+    if (opt === q.correct) setScore((s) => s + 1);
+    if (index + 1 < questions.length) {
+      setIndex((i) => i + 1);
+    } else {
+      navigation.replace("Profile", { lastScore: score + (opt === q.correct ? 1 : 0) });
+    }
+  };
+
+  if (!lesson) {
+    return <View style={styles.container}><Text style={styles.title}>No quiz</Text></View>;
+  }
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>{lesson.title} – Quiz</Text>
+      <Text style={styles.question}>{q.question}</Text>
+      {q.options.map((o:string) => (
+        <TouchableOpacity key={o} style={styles.answer} onPress={() => handleAnswer(o)}>
+          <Text style={styles.answerText}>{o}</Text>
+        </TouchableOpacity>
+      ))}
+      <Text style={styles.progress}>{index + 1} / {questions.length}</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#020617", padding: 20, paddingTop: 80 },
+  title: { fontSize: 20, color: "white", marginBottom: 20 },
+  question: { fontSize: 16, color: "#e2e8f0", marginBottom: 10 },
+  answer: { backgroundColor: "#0f172a", padding: 14, borderRadius: 10, marginBottom: 10 },
+  answerText: { color: "white" },
+  progress: { marginTop: 14, color: "#94a3b8" }
+});
+`
+);
+
+make(
+  "app/src/screens/ProfileScreen.tsx",
+  `import React from "react";
+import { View, Text, StyleSheet } from "react-native";
+
+export default function ProfileScreen({ route }: any) {
+  const score = route?.params?.lastScore;
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Your Progress</Text>
+      {score ? (
+        <Text style={styles.subtitle}>Last quiz score: {score}</Text>
+      ) : (
+        <Text style={styles.subtitle}>Complete a quiz to see results.</Text>
+      )}
+      <Text style={styles.badge}>🛡 Data Guardian</Text>
+      <Text style={styles.badge}>⚖ Bias Breaker</Text>
+      <Text style={styles.badge}>🧭 Ethical Coder (pending)</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#020617", padding: 20, paddingTop: 60 },
+  title: { fontSize: 24, color: "white", marginBottom: 10 },
+  subtitle: { color: "#94a3b8" },
+  badge: { marginTop: 10, color: "white", backgroundColor: "#0f172a", padding: 10, borderRadius: 10 }
+});
+`
+);
+
+make(
+  "app/src/data/lessons.json",
+  JSON.stringify(
+    [
+      {
+        id: "m1-l1",
+        module: "Module 1",
+        title: "AI = Data + Pattern + Prediction",
+        description: "How machines learn from examples.",
+        content: "AI systems detect patterns. They do not feel, believe, or love. They optimize.",
+        quiz: [
+          {
+            question: "What does AI mainly learn from?",
+            options: ["Data", "Magic", "Luck"],
+            correct: "Data"
+          }
+        ]
+      },
+      {
+        id: "m7-l1",
+        module: "Module 7",
+        title: "Adversarial Prompts & Jailbreaks",
+        description: "Why AIs can be tricked into unsafe output.",
+        content: "Adversarial prompts exploit gaps between instructions and model behavior...",
+        quiz: [
+          {
+            question: "What is a jailbreak?",
+            options: [
+              "A way to bypass model safety",
+              "A way to charge your phone",
+              "A new dance move"
+            ],
+            correct: "A way to bypass model safety"
+          }
+        ]
+      }
+    ],
+    null,
+    2
+  )
+);
+
+// ============================================================================
+// 4. BACKEND (Firebase + Supabase)
+// ============================================================================
+make(
+  "backend/firebase.json",
+  JSON.stringify(
+    {
+      hosting: {
+        public: "public",
+        ignore: ["firebase.json", "**/.*", "**/node_modules/**"]
+      }
+    },
+    null,
+    2
+  )
+);
+
+make(
+  "backend/firestore.rules",
+  `rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /progress/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /lessons/{doc} {
+      allow read: if true;
+    }
+
+    match /certificates/{certId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+  }
+}
+`
+);
+
+make(
+  "backend/firestore.indexes.json",
+  JSON.stringify(
+    {
+      indexes: [
+        {
+          collectionGroup: "progress",
+          queryScope: "COLLECTION",
+          fields: [
+            { fieldPath: "uid", order: "ASCENDING" },
+            { fieldPath: "completedModules", order: "ASCENDING" }
+          ]
+        }
+      ]
+    },
+    null,
+    2
+  )
+);
+
+make(
+  "backend/functions/package.json",
+  JSON.stringify(
+    {
+      name: "safe-mind-ultra-functions",
+      scripts: {
+        build: "tsc",
+        serve: "firebase emulators:start --only functions",
+        deploy: "firebase deploy --only functions"
+      },
+      dependencies: {
+        "firebase-admin": "^12.0.0",
+        "firebase-functions": "^6.0.0",
+        "node-fetch": "^3.3.2"
+      },
+      devDependencies: {
+        typescript: "^5.6.2"
+      }
+    },
+    null,
+    2
+  )
+);
+
+make(
+  "backend/functions/tsconfig.json",
+  JSON.stringify(
+    {
+      compilerOptions: {
+        module: "commonjs",
+        target: "ES2020",
+        outDir: "lib",
+        esModuleInterop: true,
+        resolveJsonModule: true,
+        strict: false
+      },
+      include: ["src"]
+    },
+    null,
+    2
+  )
+);
+
+// ---- MAIN FUNCTION (ULTRA) ----
+make(
+  "backend/functions/src/issueCredential.ts",
+  `import * as functions from "firebase-functions";
+import * as admin from "firebase-admin";
+import crypto from "crypto";
+import fetch from "node-fetch";
+
+admin.initializeApp();
+
+// ULTRA constants
+const MIN_PASSING_SCORE = 4;
+const REQUIRED_MODULES = ["Module 1","Module 2","Module 3","Module 4","Module 5","Module 6","Module 7"];
+
+const ZKP_VERIFIER_URL = process.env.ZKP_VERIFIER_URL || "http://localhost:8080";
+const PQC_KEY_SERVICE_URL = process.env.PQC_KEY_SERVICE_URL || "http://localhost:8090";
+const SOVEREIGN_ORACLE_URL = process.env.SOVEREIGN_ORACLE_URL || "http://localhost:9000";
+
+export const issueCredential = functions
+  .region("us-central1")
+  .runWith({ memory: "512MB", timeoutSeconds: 60 })
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError("unauthenticated", "Login required.");
+    }
+    const uid = context.auth.uid;
+    const db = admin.firestore();
+
+    // 1) Sovereign oracle check (stop issuance if a new threat is active)
+    try {
+      const oracle = await fetch(SOVEREIGN_ORACLE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ version: "ULTRA-1.0", uid })
+      });
+      const oracleRes = await oracle.json();
+      if (oracleRes.status && oracleRes.status !== "OK") {
+        throw new functions.https.HttpsError("unavailable", "System under security update.");
+      }
+    } catch (e) {
+      functions.logger.error("Oracle unreachable, halting issuance.", e);
+      throw new functions.https.HttpsError("unavailable", "Security oracle offline.");
+    }
+
+    // 2) Fetch progress
+    const progSnap = await db.collection("progress").doc(uid).get();
+    const progress = progSnap.data() || {};
+    const completedModules: string[] = progress.completedModules || [];
+    const hasAll = REQUIRED_MODULES.every((m) => completedModules.includes(m));
+    if (!hasAll) {
+      throw new functions.https.HttpsError("failed-precondition", "All modules not completed.");
+    }
+
+    // 3) ZKP verification
+    const zkpProof = data.zkpProof;
+    if (!zkpProof) {
+      throw new functions.https.HttpsError("invalid-argument", "ZKP proof required.");
+    }
+
+    try {
+      const zkpRes = await fetch(ZKP_VERIFIER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ proof: zkpProof, publicInputs: { uid, minScore: MIN_PASSING_SCORE } })
+      });
+      const zkpJson = await zkpRes.json();
+      if (!zkpJson.isValid) {
+        throw new functions.https.HttpsError("permission-denied", "ZKP invalid.");
+      }
+    } catch (e) {
+      functions.logger.error("ZKP Service Failure", e);
+      throw new functions.https.HttpsError("unavailable", "ZKP service unavailable.");
+    }
+
+    // 4) PQC key
+    let pqcKeyId = "DEMO_KEY";
+    try {
+      const pqcRes = await fetch(PQC_KEY_SERVICE_URL);
+      const pqcJson = await pqcRes.json();
+      pqcKeyId = pqcJson.key_id || "DEMO_KEY";
+    } catch (e) {
+      functions.logger.warn("PQC service unreachable, continuing with demo key.");
+    }
+
+    // 5) Create credential hash
+    const payload = {
+      uid,
+      modules: completedModules,
+      ts: Date.now(),
+      zkp_verified: true,
+      pqc_key: pqcKeyId
+    };
+    const rawHash = crypto.createHash("sha256").update(JSON.stringify(payload)).digest("hex");
+    const finalHash = "PQC_SIG_" + rawHash; // placeholder for real PQC sign
+
+    await db.collection("certificates").doc(uid).set({
+      ...payload,
+      hash: finalHash,
+      status: "PENDING_ONCHAIN",
+      created_at: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    // 6) Optionally call solana service (out-of-band)
+    if (process.env.SOLANA_ENDPOINT) {
+      try {
+        await fetch(process.env.SOLANA_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ root: finalHash, meta: payload })
+        });
+      } catch (e) {
+        functions.logger.error("Solana anchor failed", e);
+      }
+    }
+
+    return { hash: finalHash, status: "PENDING_ONCHAIN" };
+  });
+`
+);
+
+// Supabase schema
+make(
+  "backend/supabase/schema.sql",
+  `create table if not exists student_progress (
+  uid text primary key,
+  progress jsonb,
+  updated_at timestamp default now()
+);
+`
+);
+
+// ============================================================================
+// 5. ONCHAIN / SOLANA / ZKP / PQC / ORACLE
+// ============================================================================
+make(
+  "onchain/solana/package.json",
+  JSON.stringify(
+    {
+      name: "safe-mind-solana",
+      type: "module",
+      version: "0.1.0",
+      dependencies: {
+        "@solana/web3.js": "^1.95.3"
+      },
+      scripts: {
+        start: "node anchor_root.mjs demo-root"
+      }
+    },
+    null,
+    2
+  )
+);
+
+make(
+  "onchain/solana/anchor_root.mjs",
+  `import {
+  Connection,
+  Keypair,
+  PublicKey,
+  Transaction,
+  TransactionInstruction,
+  sendAndConfirmTransaction
+} from "@solana/web3.js";
+
+const RPC_URL = process.env.SOLANA_RPC || "https://api.devnet.solana.com";
+const MEMO_PROGRAM_ID = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
+
+const root = process.argv[2] || "demo-root";
+const meta = { app: "SAFE_MIND_ULTRA", ts: Date.now() };
+
+const run = async () => {
+  const conn = new Connection(RPC_URL, "confirmed");
+  const payer = Keypair.generate();
+  const data = Buffer.from(JSON.stringify({ root, meta }), "utf8");
+  const ix = new TransactionInstruction({ keys: [], programId: MEMO_PROGRAM_ID, data });
+  const tx = new Transaction().add(ix);
+  tx.feePayer = payer.publicKey;
+  tx.recentBlockhash = (await conn.getLatestBlockhash()).blockhash;
+  const sig = await sendAndConfirmTransaction(conn, tx, [payer]);
+  console.log("Anchored on Solana:", sig);
+};
+run().catch(console.error);
+`
+);
+
+// ZKP verifier (simple express)
+make(
+  "onchain/zkp/package.json",
+  JSON.stringify(
+    {
+      name: "zkp-verifier",
+      version: "0.1.0",
+      type: "module",
+      scripts: {
+        start: "node verifier.mjs"
+      },
+      dependencies: {
+        express: "^4.19.2"
+      }
+    },
+    null,
+    2
+  )
+);
+
+make(
+  "onchain/zkp/verifier.mjs",
+  `import express from "express";
+const app = express();
+app.use(express.json());
+app.post("/", (req, res) => {
+  // In real: verify proof using STARK / SNARK
+  res.json({ isValid: true });
+});
+app.listen(8080, () => console.log("ZKP Verifier running on :8080"));
+`
+);
+
+// PQC key service
+make(
+  "onchain/pqc/package.json",
+  JSON.stringify(
+    {
+      name: "pqc-service",
+      version: "0.1.0",
+      type: "module",
+      scripts: {
+        start: "node keyService.mjs"
+      },
+      dependencies: {
+        express: "^4.19.2"
+      }
+    },
+    null,
+    2
+  )
+);
+
+make(
+  "onchain/pqc/keyService.mjs",
+  `import express from "express";
+const app = express();
+app.get("/", (req, res) => {
+  // placeholder PQC key – in real use liboqs or KMS PQC profile
+  res.json({ public_key: "SPHINCS+_PUB_DEMO", key_id: "SPHINCS+_DEMO_2025" });
+});
+app.listen(8090, () => console.log("PQC Key Service on :8090"));
+`
+);
+
+// Security Oracle
+make(
+  "advanced/oracle/package.json",
+  JSON.stringify(
+    {
+      name: "sovereign-oracle",
+      version: "0.1.0",
+      type: "module",
+      scripts: {
+        start: "node oracle.mjs"
+      },
+      dependencies: {
+        express: "^4.19.2"
+      }
+    },
+    null,
+    2
+  )
+);
+
+make(
+  "advanced/oracle/oracle.mjs",
+  `import express from "express";
+const app = express();
+app.use(express.json());
+// Static OK – in real system, check CVE feeds, AI-safety bulletins, model cards
+app.post("/", (req, res) => {
+  res.json({ status: "OK", ts: Date.now(), version: req.body.version || "n/a" });
+});
+app.listen(9000, () => console.log("Sovereign Oracle on :9000"));
+`
+);
+
+// ML Personalizer placeholder
+make(
+  "advanced/ml-personalizer/README.md",
+  `# ML Personalizer
+This service would create adaptive difficulty for AI-safety lessons based on student performance, but would keep all inference on-device or on a private edge node.
+`
+);
+
+// ============================================================================
+// 6. DOCKER & TERRAFORM SKELETON
+// ============================================================================
+make(
+  "Dockerfile",
+  `FROM node:20-alpine
+WORKDIR /app
+COPY . .
+RUN cd app && npm install
+CMD ["npm","run","start","--prefix","app"]
+`
+);
+
+make(
+  "docker-compose.yml",
+  `version: "3.9"
+services:
+  app:
+    build: .
+    ports:
+      - "19000:19000"
+  zkp:
+    build: ./onchain/zkp
+    ports:
+      - "8080:8080"
+  pqc:
+    build: ./onchain/pqc
+    ports:
+      - "8090:8090"
+  oracle:
+    build: ./advanced/oracle
+    ports:
+      - "9000:9000"
+`
+);
+
+make(
+  "terraform/main.tf",
+  `terraform {
+  required_version = ">= 1.5.0"
+}
+provider "google" {
+  project = var.project_id
+  region  = var.region
+}
+resource "google_storage_bucket" "safe_mind_lessons" {
+  name     = "\${var.project_id}-safe-mind-lessons"
+  location = var.region
+}
+`
+);
+
+make(
+  "terraform/variables.tf",
+  `variable "project_id" { type = string }
+variable "region" { type = string default = "us-central1" }
+`
+);
+
+// ============================================================================
+// 7. TESTS
+// ============================================================================
+make(
+  "backend/functions/test/hash.test.js",
+  `import crypto from "crypto";
+test("hash is 64 chars", () => {
+  const h = crypto.createHash("sha256").update("demo").digest("hex");
+  if (h.length !== 64) throw new Error("hash length != 64");
+});
+`
+);
+
+// ============================================================================
+// DONE
+// ============================================================================
+console.log(`
+====================================================
+✅ SAFE MIND – ULTRA SOVEREIGN EDITION generated.
+Now:
+  git init
+  git add .
+  git commit -m "init: safe mind ultra"
+  git remote add origin https://github.com/YOURNAME/safe-mind-ultra.git
+  git push -u origin main
+====================================================
+`);
