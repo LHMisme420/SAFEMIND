@@ -512,7 +512,7 @@ console.log(`
 ✅ SAFE MIND SOVEREIGN REPO CREATED
 Next:
   git init && git add . && git commit -m "init"
-  git remote add origin https://github.com/YOURNAME/safe-mind.git
+  git remote add origin https://github.com/LHMisme420/SAFEMIND/edit/main/README.md
   git push -u origin main
 ======================================================
 `);
