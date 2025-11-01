@@ -3309,3 +3309,329 @@ jobs:
           for f in $(find infra -type f -name "*.yaml"); do
             echo "Checking $f"
             opa eval --format=pretty --data policy
+safe-mind-g14/
+└── .github/
+    └── workflows/
+        ├── opa-policy-check.yml
+        ├── security-scan.yml
+        └── sign-and-verify.yml
+scripts/
+└── generate-sbom.sh
+policy/rego/zero-trust.rego
+infra/
+└── ...
+name: OPA Zero-Trust Policy Check
+on:
+  pull_request:
+    branches: [ main, master ]
+  push:
+    branches: [ main, master ]
+
+jobs:
+  opa-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install OPA
+        run: |
+          curl -L -o opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64
+          chmod +x opa && sudo mv opa /usr/local/bin/opa
+      - name: Evaluate Rego policies
+        run: |
+          mkdir -p artifacts
+          for f in $(find infra -type f -name "*.yaml"); do
+            echo "🔍 Checking $f"
+            opa eval --format=pretty \
+              --data policy/rego/zero-trust.rego \
+              --input "$f" 'data.safemind.zerotrust.allow' > artifacts/opa-$(
+              basename $f).txt
+            if grep -q "false" artifacts/opa-$(basename $f).txt; then
+              echo "❌ Policy violation in $f"; exit 1
+            fi
+          done
+      - name: Upload OPA results
+        uses: actions/upload-artifact@v4
+        with:
+          name: opa-results
+          path: artifacts
+name: Security Scan Pipeline
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+
+      # 1) Dependency scan
+      - name: Snyk scan
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      # 2) Infrastructure-as-Code scan
+      - name: Scan Terraform with Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: infra
+
+      # 3) Container image scan (if Dockerfile present)
+      - name: Build and scan image
+        run: |
+          if [ -f Dockerfile ]; then
+            docker build -t safemind:test .
+            docker run --rm aquasec/trivy:latest image --severity HIGH,CRITICAL safemind:test
+          fi
+name: Build, SBOM, and Sign
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-sbom-sign:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Cosign
+        uses: sigstore/cosign-installer@v3
+      - name: Install Syft & Grype
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+      - name: Generate SBOM
+        run: |
+          mkdir -p artifacts
+          syft dir:. -o cyclonedx-json > artifacts/sbom.json
+      - name: Sign SBOM
+        run: |
+          cosign sign-blob --key ${{ secrets.COSIGN_PRIVATE_KEY }} artifacts/sbom.json > artifacts/sbom.sig
+      - name: Verify signature
+        run: |
+          cosign verify-blob --key ${{ secrets.COSIGN_PUBLIC_KEY }} \
+            --signature artifacts/sbom.sig artifacts/sbom.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: signed-sbom
+          path: artifacts
+#!/usr/bin/env bash
+set -e
+mkdir -p artifacts
+echo "🔍 Generating SBOM..."
+if ! command -v syft >/dev/null 2>&1; then
+  echo "Installing Syft..."
+  curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+fi
+syft dir:. -o cyclonedx-json > artifacts/sbom.json
+echo "✅ SBOM saved to artifacts/sbom.json"
+name: Compliance Evidence Package
+on:
+  workflow_run:
+    workflows:
+      - OPA Zero-Trust Policy Check
+      - Security Scan Pipeline
+      - Build, SBOM, and Sign
+    types:
+      - completed
+  workflow_dispatch:
+
+jobs:
+  package-evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 1. Install deps for scripts
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        run: |
+          npm install yaml
+
+      # 2. Re-generate SSP and POA&M to ensure they're fresh
+      - name: Generate SSP
+        run: |
+          node scripts/generate-ssp.js
+
+      - name: Generate POA&M
+        run: |
+          node scripts/generate-poam.js
+
+      # 3. Collect artifacts
+      - name: Collect evidence
+        run: |
+          mkdir -p evidence
+          [ -f SSP.md ] && cp SSP.md evidence/
+          [ -f POAM.json ] && cp POAM.json evidence/
+          [ -d artifacts ] && cp -r artifacts evidence/artifacts
+          echo "Generated at: $(date -u '+%Y-%m-%dT%H:%M:%SZ')" > evidence/META.txt
+
+      # 4. Package
+      - name: Create zip
+        run: |
+          cd evidence
+          zip -r ../evidence-package.zip .
+          cd ..
+
+      # 5. Upload
+      - name: Upload evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: compliance-evidence
+          path: evidence-package.zip
+#!/usr/bin/env node
+import fs from "fs";
+import path from "path";
+import yaml from "yaml";
+
+const ROOT = process.cwd();
+const ocPath = path.join(ROOT, "compliance", "opencontrol.yaml");
+const oc = yaml.parse(fs.readFileSync(ocPath, "utf8"));
+
+let md = `# System Security Plan (SSP)\n\n`;
+md += `**System:** ${oc.name}\n\n`;
+md += `**Description:** ${oc.metadata?.description || ""}\n\n`;
+
+md += `## Standards\n`;
+(oc.standards || []).forEach((std) => {
+  md += `- ${std}\n`;
+});
+
+md += `\n## Components\n`;
+(oc.components || []).forEach((comp) => {
+  md += `- ${comp}\n`;
+});
+
+md += `\n---\n## Controls\n`;
+
+for (const compPath of oc.components || []) {
+  const full = path.join(ROOT, "compliance", compPath.replace("./", ""));
+  if (!fs.existsSync(full)) continue;
+  const comp = yaml.parse(fs.readFileSync(full, "utf8"));
+  md += `\n### ${comp.name}\n${comp.description || ""}\n`;
+  for (const sat of comp.satisfies || []) {
+    md += `\n**Control:** ${sat.control_key}\n`;
+    md += `Status: ${sat.implementation_status}\n`;
+    for (const n of sat.narrative || []) {
+      md += `- ${n.text}\n`;
+    }
+  }
+}
+
+fs.writeFileSync("SSP.md", md, "utf8");
+console.log("✅ SSP.md written");
+#!/usr/bin/env node
+import fs from "fs";
+import path from "path";
+import yaml from "yaml";
+
+const ROOT = process.cwd();
+const oc = yaml.parse(fs.readFileSync(path.join(ROOT, "compliance", "opencontrol.yaml"), "utf8"));
+
+const items = [];
+
+for (const compPath of oc.components || []) {
+  const full = path.join(ROOT, "compliance", compPath.replace("./", ""));
+  if (!fs.existsSync(full)) continue;
+  const comp = yaml.parse(fs.readFileSync(full, "utf8"));
+  for (const sat of comp.satisfies || []) {
+    if (!sat.implementation_status || sat.implementation_status !== "complete") {
+      items.push({
+        control: sat.control_key,
+        component: comp.name,
+        status: sat.implementation_status || "unknown",
+        action: "Complete control and attach evidence (screenshots, TF state, CI logs).",
+        priority: ["AC-2", "AC-6", "AU-6", "SC-13"].includes(sat.control_key) ? "HIGH" : "MEDIUM",
+        owner: "Platform/Security",
+        due: "2025-12-31"
+      });
+    }
+  }
+}
+
+const output = {
+  system: oc.name,
+  generated_at: new Date().toISOString(),
+  items
+};
+
+fs.writeFileSync("POAM.json", JSON.stringify(output, null, 2));
+console.log("✅ POAM.json written");
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/api"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "npm"
+    directory: "/scripts"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+# CODEOWNERS
+*       @YOUR-GITHUB
+infra/* @YOUR-GITHUB @security-team
+policy/* @YOUR-GITHUB @security-team
+compliance/* @YOUR-GITHUB @security-team
+.github/* @YOUR-GITHUB @security-team
+# CODEOWNERS
+*       @YOUR-GITHUB
+infra/* @YOUR-GITHUB @security-team
+policy/* @YOUR-GITHUB @security-team
+compliance/* @YOUR-GITHUB @security-team
+.github/* @YOUR-GITHUB @security-team
+#!/usr/bin/env bash
+set -e
+rm -rf evidence
+mkdir -p evidence
+[ -f SSP.md ] && cp SSP.md evidence/
+[ -f POAM.json ] && cp POAM.json evidence/
+[ -d artifacts ] && cp -r artifacts evidence/
+echo "Generated: $(date -u '+%Y-%m-%dT%H:%M:%SZ')" > evidence/META.txt
+zip -r evidence-package.zip evidence
+echo "✅ evidence-package.zip created"
+// scripts/otel-exporter.js
+// optional: send traces/metrics to OTEL collector
+import { diag, DiagConsoleLogger, DiagLogLevel } from "@opentelemetry/api";
+import { NodeSDK } from "@opentelemetry/sdk-node";
+import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
+
+diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.INFO);
+
+const sdk = new NodeSDK({
+  traceExporter: new OTLPTraceExporter({
+    url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || "http://localhost:4318/v1/traces",
+  }),
+});
+
+sdk.start().then(() => {
+  console.log("OTEL SDK started");
+});
+{
+  "name": "safe-mind-g14",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "generate:ssp": "node scripts/generate-ssp.js",
+    "generate:poam": "node scripts/generate-poam.js",
+    "package:evidence": "bash scripts/package-evidence.sh"
+  },
+  "dependencies": {
+    "yaml": "^2.5.0"
+  }
+}
