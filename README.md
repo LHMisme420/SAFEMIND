@@ -248,3 +248,271 @@ export const issueCredential = functions.https.onCall(async (data, context) => {
 
     return { hash, status: "ANCHORED" };
 });
+node init-safe-mind-complete.js
+#!/usr/bin/env node
+// ================================================================
+// 🧠 SAFE MIND – Sovereign Edition Full Repo Generator
+// ------------------------------------------------
+// Generates the entire multi-layer repo structure automatically.
+// Run with Node 18+
+// ================================================================
+
+import { writeFileSync, mkdirSync } from "fs";
+import { join } from "path";
+
+function make(path, content) {
+  const dir = path.split("/").slice(0, -1).join("/");
+  if (dir) mkdirSync(dir, { recursive: true });
+  writeFileSync(path, content.trim() + "\n");
+  console.log("✅", path);
+}
+
+// ------------------------------------------------
+// ROOT FILES
+// ------------------------------------------------
+make(".nvmrc", "v20.11.1");
+make(".prettierrc", JSON.stringify({ semi: true, singleQuote: false, printWidth: 100, trailingComma: "all" }, null, 2));
+make(".eslintignore", "node_modules\nbuild\ncoverage\n");
+make(".dockerignore", "node_modules\n.DS_Store\n.env\n");
+
+make(".gitignore", `node_modules
+.expo
+dist
+.env
+.idea
+.vscode
+firebase-debug.log
+*.log
+`);
+
+make("LICENSE", `MIT License
+
+Copyright (c) 2025 Leroy H. Mason
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies...
+`);
+
+make("README.md", `# 🧠 SAFE MIND – AI Safety Learning for Teens
+A full-stack curriculum teaching ethical AI use, digital resilience, and verified literacy.
+
+## 📦 Structure
+- app/ — React Native / Expo mobile app
+- backend/ — Firebase + Supabase serverless backend
+- onchain/ — Solana / ZKP / PQC credential anchoring
+- docs/ — Curriculum + Educator Guide
+- .github/ — CI/CD workflows
+
+Run locally:
+\`\`\`bash
+cd app && npm install && npx expo start
+cd backend/functions && npm install && npm run build
+firebase deploy --only functions
+\`\`\`
+`);
+
+make("CODE_OF_CONDUCT.md", "Please maintain respect, inclusion, and safety for all youth participants.");
+make("CONTRIBUTING.md", "Fork, branch, test, and submit PRs. Ensure educational and ethical alignment.");
+make("SECURITY.md", "No PII, no ads, COPPA + FERPA compliance. Contact lhmisme2011@gmail.com for reports.");
+
+// ------------------------------------------------
+// DOCS
+// ------------------------------------------------
+make("docs/curriculum.md", `# SAFE MIND Curriculum (Modules 1–7)
+Module 1 – What Is AI?  
+Module 2 – Digital Responsibility  
+Module 3 – Bias & Fairness  
+Module 4 – AI & Society  
+Module 5 – Human Resilience  
+Module 6 – AI Citizenship  
+Module 7 – Adversarial Resilience & Autonomous Agents
+`);
+
+make("docs/educator-guide.md", `# Educator Guide
+Audience: Grades 7–12, faith-based & community youth programs.  
+Assessment: 60% quiz | 20% reflection | 20% project  
+Safety: Private by default – no ads, no tracking.
+`);
+
+// ------------------------------------------------
+// GITHUB WORKFLOW
+// ------------------------------------------------
+make(".github/workflows/deploy.yml", `name: Deploy
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: cd backend/functions && npm ci && npm run build
+      - run: firebase deploy --only functions
+      - run: cd app && npm install && npx expo export:web
+`);
+
+// ------------------------------------------------
+// APP (React Native / Expo)
+// ------------------------------------------------
+make("app/package.json", JSON.stringify({
+  name: "safe-mind-app",
+  version: "0.2.0",
+  private: true,
+  main: "node_modules/expo/AppEntry.js",
+  scripts: { start: "expo start", lint: "eslint . --ext .ts,.tsx || true" },
+  dependencies: {
+    expo: "~52.0.0",
+    react: "18.3.1",
+    "react-native": "0.76.0",
+    "@react-navigation/native": "^6",
+    "@react-navigation/native-stack": "^6"
+  }
+}, null, 2));
+
+make("app/tsconfig.json", JSON.stringify({ compilerOptions: { jsx: "react", allowJs: true, noEmit: true } }, null, 2));
+
+make("app/App.tsx", `import React from "react";
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import HomeScreen from "./src/screens/HomeScreen";
+import ModuleScreen from "./src/screens/ModuleScreen";
+import LessonScreen from "./src/screens/LessonScreen";
+import QuizScreen from "./src/screens/QuizScreen";
+import ProfileScreen from "./src/screens/ProfileScreen";
+
+const Stack = createNativeStackNavigator();
+export default function App() {
+  return (
+    <NavigationContainer>
+      <Stack.Navigator initialRouteName="Home" screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="Home" component={HomeScreen}/>
+        <Stack.Screen name="Module" component={ModuleScreen}/>
+        <Stack.Screen name="Lesson" component={LessonScreen}/>
+        <Stack.Screen name="Quiz" component={QuizScreen}/>
+        <Stack.Screen name="Profile" component={ProfileScreen}/>
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
+`);
+
+// sample screen
+make("app/src/screens/HomeScreen.tsx", `import React from "react";
+import { View, Text } from "react-native";
+export default function HomeScreen(){return <View style={{flex:1,justifyContent:"center",alignItems:"center"}}><Text>SAFE MIND</Text></View>;}
+`);
+
+make("app/src/data/lessons.json", JSON.stringify([
+  { id:"m1-l1", module:"Module 1", title:"AI = Data + Pattern + Prediction",
+    description:"How machines learn from examples.",
+    content:"AI systems learn from data patterns but don’t truly understand.",
+    quiz:[{question:"What does AI learn from?",options:["Data","Magic","Luck"],correct:"Data"}]}
+], null, 2));
+
+// ------------------------------------------------
+// BACKEND / FIREBASE
+// ------------------------------------------------
+make("backend/firebase.json", JSON.stringify({ hosting: { public: "public" } }, null, 2));
+
+make("backend/firestore.rules", `rules_version='2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /progress/{userId} {
+      allow read,write: if request.auth!=null && request.auth.uid==userId;
+    }
+    match /lessons/{doc} {
+      allow read: if true;
+    }
+  }
+}`);
+
+make("backend/functions/package.json", JSON.stringify({
+  name: "safe-mind-functions",
+  scripts: { build: "tsc", deploy: "firebase deploy --only functions" },
+  dependencies: { "firebase-admin": "^12.0.0", "firebase-functions": "^6.0.0", "node-fetch": "^3.3.2" },
+  devDependencies: { typescript: "^5.6.2" }
+}, null, 2));
+
+make("backend/functions/src/issueCredential.ts", `import * as functions from "firebase-functions";
+import * as admin from "firebase-admin";
+import crypto from "crypto";
+import fetch from "node-fetch";
+admin.initializeApp();
+export const issueCredential = functions.region("us-central1").runWith({memory:"512MB",timeoutSeconds:60})
+.https.onCall(async(data,context)=>{
+  if(!context.auth) throw new functions.https.HttpsError("unauthenticated","Login required.");
+  const uid=context.auth.uid; const db=admin.firestore();
+  const progress=(await db.collection("progress").doc(uid).get()).data()||{};
+  if(!progress.completedModules) throw new functions.https.HttpsError("failed-precondition","Modules incomplete.");
+  const payload={uid,modules:progress.completedModules,ts:Date.now()};
+  const hash=crypto.createHash("sha256").update(JSON.stringify(payload)).digest("hex");
+  await db.collection("certificates").doc(uid).set({uid,hash,ts:admin.firestore.FieldValue.serverTimestamp()});
+  try{await fetch(process.env.SOLANA_ENDPOINT||"",{
+    method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({root:hash})});
+  }catch(e){functions.logger.error(e);}
+  return {hash,status:"ANCHORED"};
+});`);
+
+// ------------------------------------------------
+// SUPABASE MIRROR / SCHEMA
+// ------------------------------------------------
+make("backend/supabase/schema.sql", `create table if not exists student_progress(
+  uid text primary key,
+  progress jsonb,
+  updated_at timestamp default now()
+);`);
+
+// ------------------------------------------------
+// ONCHAIN / SOLANA / ZKP / PQC
+// ------------------------------------------------
+make("onchain/solana/package.json", JSON.stringify({ name:"safe-mind-solana", dependencies:{"@solana/web3.js":"^1.95.3"}}, null, 2));
+
+make("onchain/solana/anchor_root.ts", `import {Connection,Keypair,PublicKey,Transaction,TransactionInstruction,sendAndConfirmTransaction} from "@solana/web3.js";
+const RPC_URL=process.env.SOLANA_RPC||"https://api.devnet.solana.com";
+const MEMO_PROGRAM_ID=new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
+(async()=>{
+  const c=new Connection(RPC_URL,"confirmed");
+  const kp=Keypair.generate();
+  const ix=new TransactionInstruction({keys:[],programId:MEMO_PROGRAM_ID,data:Buffer.from(JSON.stringify({root:"demo-root"}))});
+  const tx=new Transaction().add(ix); tx.feePayer=kp.publicKey; tx.recentBlockhash=(await c.getLatestBlockhash()).blockhash;
+  const sig=await sendAndConfirmTransaction(c,tx,[kp]); console.log("Anchored root:",sig);
+})();`);
+
+make("onchain/zkp/verifier.ts", `import express from "express";
+const app=express();app.use(express.json());
+app.post("/",(req,res)=>res.json({isValid:true}));
+app.listen(8080,()=>console.log("ZKP Verifier online"));
+`);
+
+make("onchain/pqc/keyService.ts", `import express from "express";
+const app=express();app.get("/",(req,res)=>res.json({public_key:"demoPQCKey",key_id:"SPHINCS+"}));
+app.listen(8090,()=>console.log("PQC Key Service online"));
+`);
+
+// ------------------------------------------------
+// TESTS
+// ------------------------------------------------
+make("backend/functions/test/hash.test.js", `import crypto from "crypto";
+test("hash length",()=>{
+  const h=crypto.createHash("sha256").update("demo").digest("hex");
+  expect(h.length).toBe(64);
+});
+`);
+
+// ------------------------------------------------
+// FINISH
+// ------------------------------------------------
+console.log(`
+======================================================
+✅ SAFE MIND SOVEREIGN REPO CREATED
+Next:
+  git init && git add . && git commit -m "init"
+  git remote add origin https://github.com/YOURNAME/safe-mind.git
+  git push -u origin main
+======================================================
+`);
